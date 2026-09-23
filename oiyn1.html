@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Төрт түліктің пайдасы — ойын</title>
+<style>
+  :root{
+    --bg1:#fff6d5;
+    --bg2:#cdeeff;
+    --card-bg:#ffffff;
+    --accent:#ff7a45;
+    --green:#3ecf6b;
+    --red:#ff5b5b;
+    --shadow: 0 8px 0 rgba(0,0,0,0.12);
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow-x:hidden;
+    touch-action: none;
+    font-family: 'Comic Sans MS', 'Segoe UI Rounded', 'Trebuchet MS', sans-serif;
+    background: linear-gradient(160deg, var(--bg1) 0%, var(--bg2) 100%);
+  }
+
+  h1{
+    text-align:center;
+    color:#ff5722;
+    font-size: clamp(24px, 5vw, 44px);
+    margin: 16px 10px 6px;
+    text-shadow: 2px 2px 0 #fff, 4px 4px 0 rgba(0,0,0,0.08);
+  }
+
+  .subtitle{
+    text-align:center;
+    font-size: clamp(14px, 2.5vw, 20px);
+    color:#555;
+    margin-bottom: 10px;
+  }
+
+  .progress{
+    text-align:center;
+    font-size: clamp(16px, 3vw, 24px);
+    font-weight:bold;
+    color:#2f7ce0;
+    margin-bottom: 10px;
+  }
+
+  .board{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 10px 4vw 40px;
+    gap: 4vw;
+  }
+
+  .column{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap: 18px;
+  }
+
+  .col-title{
+    text-align:center;
+    font-size: clamp(15px, 2.8vw, 22px);
+    font-weight:bold;
+    color:#444;
+    margin-bottom: 4px;
+  }
+
+  .animal-card, .product-slot{
+    background: var(--card-bg);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding: 10px 6px;
+    height: 110px;
+    position:relative;
+    user-select:none;
+    transition: transform .15s ease, box-shadow .15s ease, background .3s ease;
+  }
+
+  .animal-card{
+    border: 4px solid #ffd166;
+    cursor: grab;
+    touch-action: none;
+    z-index: 2;
+  }
+  .animal-card.dragging{
+    position: fixed;
+    z-index: 999;
+    cursor: grabbing;
+    box-shadow: 0 14px 20px rgba(0,0,0,0.25);
+    transform: scale(1.1) rotate(-2deg);
+    pointer-events: none;
+  }
+  .animal-card.matched{
+    opacity: 0;
+    pointer-events: none;
+  }
+  .animal-card.shake{
+    animation: shake .4s;
+  }
+
+  @keyframes shake{
+    0%,100%{ transform: translateX(0); }
+    20%{ transform: translateX(-10px); }
+    40%{ transform: translateX(10px); }
+    60%{ transform: translateX(-8px); }
+    80%{ transform: translateX(8px); }
+  }
+
+  .emoji{
+    font-size: clamp(34px, 7vw, 52px);
+    line-height:1;
+  }
+  .label{
+    margin-top: 4px;
+    font-weight: bold;
+    font-size: clamp(13px, 2.4vw, 17px);
+    color:#333;
+    text-align:center;
+  }
+
+  .product-slot{
+    border: 4px dashed #90caf9;
+    background: #f4fbff;
+  }
+  .product-slot.hover{
+    border-color: var(--accent);
+    background: #fff3e8;
+    transform: scale(1.04);
+  }
+  .product-slot.correct{
+    border: 4px solid var(--green);
+    background: #e5fff0;
+    animation: pop .4s ease;
+  }
+  .product-slot.correct .emoji{
+    filter: drop-shadow(0 0 6px rgba(62,207,107,0.6));
+  }
+
+  @keyframes pop{
+    0%{ transform: scale(1); }
+    50%{ transform: scale(1.15); }
+    100%{ transform: scale(1); }
+  }
+
+  .checkmark{
+    position:absolute;
+    top:-10px;
+    right:-10px;
+    background: var(--green);
+    color:white;
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.15);
+    opacity:0;
+    transform: scale(0);
+    transition: all .3s ease;
+  }
+  .product-slot.correct .checkmark{
+    opacity:1;
+    transform: scale(1);
+  }
+
+  /* win overlay */
+  .overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index: 1000;
+    padding: 20px;
+  }
+  .overlay.show{ display:flex; }
+  .win-box{
+    background: white;
+    border-radius: 28px;
+    padding: 30px 26px;
+    text-align:center;
+    max-width: 420px;
+    box-shadow: 0 12px 0 rgba(0,0,0,0.15);
+    animation: pop .5s ease;
+  }
+  .win-box .big-emoji{
+    font-size: 60px;
+    margin-bottom: 10px;
+  }
+  .win-box h2{
+    color:#ff5722;
+    margin: 0 0 8px;
+    font-size: clamp(22px,5vw,30px);
+  }
+  .win-box p{
+    color:#555;
+    font-size: 17px;
+    margin-bottom: 20px;
+  }
+  .restart-btn{
+    background: var(--accent);
+    color:white;
+    border:none;
+    border-radius: 18px;
+    padding: 14px 30px;
+    font-size: 20px;
+    font-weight:bold;
+    cursor:pointer;
+    box-shadow: 0 6px 0 #c85a2f;
+    transition: transform .1s;
+    font-family: inherit;
+  }
+  .restart-btn:active{
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #c85a2f;
+  }
+
+  @media (max-width:480px){
+    .board{ gap:3vw; padding: 6px 3vw 30px; }
+    .animal-card,.product-slot{ height: 95px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🐄 Төрт түліктің пайдасы 🐫</h1>
+<p class="subtitle">Жануарды оның пайдалы өніміне сүйреп апар!</p>
+<p class="progress">Тапқаның: <span id="score">0</span> / 4</p>
+
+<div class="board">
+  <div class="column" id="animals-col">
+    <div class="col-title">🐾 Жануарлар</div>
+    <!-- animal cards will be inserted here -->
+  </div>
+  <div class="column" id="products-col">
+    <div class="col-title">🎁 Өнімдер</div>
+    <!-- product slots will be inserted here -->
+  </div>
+</div>
+
+<div class="overlay" id="winOverlay">
+  <div class="win-box">
+    <div class="big-emoji">🎉🏆🎉</div>
+    <h2>Керемет! Жарайсың!</h2>
+    <p>Сен барлық түліктің пайдасын дұрыс таптың!</p>
+    <button class="restart-btn" id="restartBtn">Қайта ойнау 🔁</button>
+  </div>
+</div>
+
+<!-- Дыбыс файлдары: осы жерге cow.mp3, sheep.mp3, horse.mp3, camel.mp3 файлдарын
+     осы HTML файлымен бір қапшыққа (папкаға) салыңыз -->
+<audio id="sound-cow" src="audio/cow.mp3" preload="auto"></audio>
+<audio id="sound-sheep" src="audio/sheep.mp3" preload="auto"></audio>
+<audio id="sound-horse" src="audio/horse.MP3" preload="auto"></audio>
+<audio id="sound-camel" src="audio/camel.mp3" preload="auto"></audio>
+
+<script>
+(function(){
+  // ---- Ойын деректері ----
+  const ANIMALS = [
+    { id:'cow',   emoji:'🐄', label:'Сиыр'  },
+    { id:'sheep', emoji:'🐑', label:'Қой'   },
+    { id:'horse', emoji:'🐎', label:'Жылқы' },
+    { id:'camel', emoji:'🐫', label:'Түйе'  }
+  ];
+
+  const PRODUCTS = [
+    { id:'cow',   emoji:'🥛🧀', label:'Сүт / Ірімшік' },
+    { id:'sheep', emoji:'🧶',   label:'Жүн / Киім'    },
+    { id:'horse', emoji:'🍶',   label:'Қымыз'         },
+    { id:'camel', emoji:'🥤',   label:'Шұбат'         }
+  ];
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  const animalsCol = document.getElementById('animals-col');
+  const productsCol = document.getElementById('products-col');
+  const scoreEl = document.getElementById('score');
+  const winOverlay = document.getElementById('winOverlay');
+  const restartBtn = document.getElementById('restartBtn');
+
+  let matchedCount = 0;
+  let dragEl = null;      // currently dragged clone
+  let sourceCard = null;  // original card element being dragged
+  let startX=0, startY=0, origLeft=0, origTop=0, origWidth=0, origHeight=0;
+
+  function playSound(id){
+    const audio = document.getElementById('sound-' + id);
+    if(audio){
+      audio.currentTime = 0;
+      audio.play().catch(()=>{ /* дыбыс файлы табылмаса, үнсіз өтеміз */ });
+    }
+  }
+
+  function buildBoard(){
+    animalsCol.querySelectorAll('.animal-card').forEach(n=>n.remove());
+    productsCol.querySelectorAll('.product-slot').forEach(n=>n.remove());
+    matchedCount = 0;
+    scoreEl.textContent = '0';
+    winOverlay.classList.remove('show');
+
+    ANIMALS.forEach(a=>{
+      const card = document.createElement('div');
+      card.className = 'animal-card';
+      card.dataset.animal = a.id;
+      card.innerHTML = `<div class="emoji">${a.emoji}</div><div class="label">${a.label}</div>`;
+      animalsCol.appendChild(card);
+      addDragEvents(card);
+    });
+
+    const shuffledProducts = shuffle(PRODUCTS);
+    shuffledProducts.forEach(p=>{
+      const slot = document.createElement('div');
+      slot.className = 'product-slot';
+      slot.dataset.product = p.id;
+      slot.innerHTML = `<div class="emoji">${p.emoji}</div><div class="label">${p.label}</div><div class="checkmark">✓</div>`;
+      productsCol.appendChild(slot);
+    });
+  }
+
+  function addDragEvents(card){
+    card.addEventListener('pointerdown', onPointerDown);
+  }
+
+  function onPointerDown(e){
+    const card = e.currentTarget;
+    if(card.classList.contains('matched')) return;
+    e.preventDefault();
+
+    sourceCard = card;
+    const rect = card.getBoundingClientRect();
+    origLeft = rect.left; origTop = rect.top;
+    origWidth = rect.width; origHeight = rect.height;
+    startX = e.clientX; startY = e.clientY;
+
+    // жасырын түпнұсқа орны бос қалады, клон жасаймыз
+    dragEl = card.cloneNode(true);
+    dragEl.classList.add('dragging');
+    dragEl.style.left = rect.left + 'px';
+    dragEl.style.top = rect.top + 'px';
+    dragEl.style.width = rect.width + 'px';
+    dragEl.style.height = rect.height + 'px';
+    document.body.appendChild(dragEl);
+
+    card.style.visibility = 'hidden';
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  }
+
+  function onPointerMove(e){
+    if(!dragEl) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    dragEl.style.left = (origLeft + dx) + 'px';
+    dragEl.style.top = (origTop + dy) + 'px';
+
+    // hover эффектін тексеру
+    document.querySelectorAll('.product-slot').forEach(s=>s.classList.remove('hover'));
+    dragEl.style.pointerEvents = 'none';
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const slot = under ? under.closest('.product-slot') : null;
+    if(slot && !slot.classList.contains('correct')){
+      slot.classList.add('hover');
+    }
+  }
+
+  function onPointerUp(e){
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+
+    document.querySelectorAll('.product-slot').forEach(s=>s.classList.remove('hover'));
+
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const slot = under ? under.closest('.product-slot') : null;
+
+    if(slot && !slot.classList.contains('correct') && slot.dataset.product === sourceCard.dataset.animal){
+      // Дұрыс сәйкестік!
+      slot.classList.add('correct');
+      sourceCard.classList.add('matched');
+      matchedCount++;
+      scoreEl.textContent = String(matchedCount);
+      playSound(sourceCard.dataset.animal);
+
+      cleanupDrag();
+
+      if(matchedCount >= ANIMALS.length){
+        setTimeout(()=>{ winOverlay.classList.add('show'); }, 500);
+      }
+    } else {
+      // Қате немесе бос жер — карточка орнына қайтады
+      sourceCard.classList.add('shake');
+      setTimeout(()=> sourceCard.classList.remove('shake'), 400);
+      cleanupDrag();
+    }
+  }
+
+  function cleanupDrag(){
+    if(dragEl){ dragEl.remove(); dragEl = null; }
+    if(sourceCard){ sourceCard.style.visibility = 'visible'; sourceCard = null; }
+  }
+
+  restartBtn.addEventListener('click', buildBoard);
+
+  buildBoard();
+})();
+</script>
+
+</body>
+</html>

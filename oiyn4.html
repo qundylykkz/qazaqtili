@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Шындық па, өтірік пе?</title>
+<style>
+  :root{
+    --sky1:#5ec8d8;
+    --sky2:#a4e8d3;
+    --sun:#ffd23f;
+    --ground1:#8bc74a;
+    --ground2:#6fb03a;
+    --gold:#f4b41a;
+    --terracotta:#e8622c;
+    --card:#fff9ec;
+    --ink:#2b2320;
+    --green:#3fb663;
+    --green-dark:#2c8c4a;
+    --red:#e8543f;
+    --red-dark:#c23f2c;
+    --ornament:#c0392b;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    font-family:"Trebuchet MS","Segoe UI",Verdana,sans-serif;
+    overflow:hidden;
+    touch-action:manipulation;
+  }
+  body{
+    background:
+      radial-gradient(circle at 85% 12%, var(--sun) 0 9%, transparent 9.5%),
+      linear-gradient(180deg, var(--sky1) 0%, var(--sky2) 55%, var(--ground1) 55%, var(--ground2) 100%);
+    position:relative;
+    width:100vw;height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* decorative clouds */
+  .cloud{position:absolute;background:#fff;border-radius:50px;opacity:.85;filter:blur(0.3px);}
+  .cloud::before,.cloud::after{content:"";position:absolute;background:#fff;border-radius:50%;}
+  .c1{width:90px;height:34px;top:8%;left:6%;}
+  .c1::before{width:50px;height:50px;top:-24px;left:10px;}
+  .c1::after{width:36px;height:36px;top:-16px;left:50px;}
+  .c2{width:70px;height:26px;top:16%;right:14%;}
+  .c2::before{width:38px;height:38px;top:-18px;left:8px;}
+  .c2::after{width:28px;height:28px;top:-12px;left:38px;}
+
+  /* ornament border strip along bottom */
+  .ornament-strip{
+    position:absolute;bottom:0;left:0;width:100%;height:14px;
+    background-image: repeating-linear-gradient(45deg, var(--ornament) 0 7px, var(--gold) 7px 14px);
+    opacity:.55;
+  }
+
+  #app{
+    width:min(560px,94vw);
+    height:min(880px,96vh);
+    background:var(--card);
+    border-radius:34px;
+    box-shadow:0 18px 0 rgba(0,0,0,.12), 0 24px 40px rgba(0,0,0,.25);
+    border:6px solid #fff;
+    outline:6px solid var(--gold);
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+
+  header{
+    text-align:center;
+    padding:14px 10px 6px;
+    position:relative;
+  }
+  header h1{
+    margin:0;
+    font-size:clamp(22px,5.4vw,30px);
+    color:var(--terracotta);
+    text-shadow:2px 2px 0 #fff, 0 3px 0 rgba(0,0,0,.08);
+    letter-spacing:.5px;
+  }
+  header .sub{
+    margin-top:2px;
+    color:#7a6a52;
+    font-size:14px;
+  }
+
+  #scoreBar{
+    position:absolute;top:14px;left:16px;
+    background:#fff;
+    border-radius:20px;
+    padding:6px 14px;
+    font-weight:bold;
+    color:var(--gold);
+    box-shadow:0 3px 0 rgba(0,0,0,.1);
+    font-size:15px;
+    display:flex;align-items:center;gap:4px;
+  }
+  #progressDots{
+    display:flex;
+    justify-content:center;
+    gap:7px;
+    margin:2px 0 4px;
+  }
+  .dot{
+    width:11px;height:11px;border-radius:50%;
+    background:#e3d9c4;
+    transition:.25s;
+  }
+  .dot.done{background:var(--green);}
+  .dot.active{background:var(--gold);transform:scale(1.3);}
+  .dot.wrongDone{background:var(--red);}
+
+  /* stage */
+  #stage{
+    flex:1;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    padding:6px 18px 0;
+    min-height:0;
+  }
+
+  .speechBubble{
+    max-width:88%;
+    background:#fff;
+    border:3px solid var(--terracotta);
+    border-radius:20px;
+    padding:12px 16px;
+    font-size:clamp(15px,3.6vw,19px);
+    color:var(--ink);
+    text-align:center;
+    position:relative;
+    min-height:30px;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 0 rgba(0,0,0,.06);
+    transition:opacity .2s;
+  }
+  .speechBubble::after{
+    content:"";
+    position:absolute;
+    bottom:-16px;left:50%;
+    transform:translateX(-50%);
+    border-width:12px 10px 0 10px;
+    border-style:solid;
+    border-color:var(--terracotta) transparent transparent transparent;
+  }
+  .speechBubble.hidden{opacity:0;}
+  .speechBubble .lockedText{color:#b9ad97;font-style:italic;}
+
+  #charWrap{
+    margin-top:22px;
+    position:relative;
+    width:220px;height:230px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  #charWrap svg{width:100%;height:100%;overflow:visible;}
+
+  #charWrap.dance{animation:dance .6s ease-in-out 3;}
+  #charWrap.shake{animation:shake .45s ease-in-out 2;}
+  @keyframes dance{
+    0%{transform:translateY(0) rotate(0);}
+    20%{transform:translateY(-18px) rotate(-8deg);}
+    40%{transform:translateY(0) rotate(6deg);}
+    60%{transform:translateY(-14px) rotate(-6deg);}
+    80%{transform:translateY(0) rotate(4deg);}
+    100%{transform:translateY(0) rotate(0);}
+  }
+  @keyframes shake{
+    0%,100%{transform:translateX(0) rotate(0);}
+    25%{transform:translateX(-10px) rotate(-4deg);}
+    75%{transform:translateX(10px) rotate(4deg);}
+  }
+
+  #playBtn{
+    margin-top:8px;
+    background:var(--gold);
+    border:none;
+    color:#5a3b00;
+    font-weight:bold;
+    font-size:17px;
+    padding:12px 26px;
+    border-radius:50px;
+    box-shadow:0 5px 0 #c98f00;
+    cursor:pointer;
+    display:flex;align-items:center;gap:8px;
+    transition:transform .08s;
+  }
+  #playBtn:active{transform:translateY(4px);box-shadow:0 1px 0 #c98f00;}
+  #playBtn .icon{font-size:22px;}
+  #playBtn.playing{animation:pulse 1s infinite;}
+  @keyframes pulse{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.06);}
+  }
+
+  #feedback{
+    min-height:30px;
+    font-size:19px;
+    font-weight:bold;
+    margin-top:4px;
+    text-align:center;
+  }
+  #feedback.good{color:var(--green-dark);}
+  #feedback.bad{color:var(--red-dark);}
+
+  /* answer buttons */
+  #answers{
+    display:flex;
+    gap:16px;
+    padding:14px 18px 22px;
+  }
+  .ansBtn{
+    flex:1;
+    border:none;
+    border-radius:26px;
+    padding:18px 8px 16px;
+    font-size:clamp(16px,4.2vw,21px);
+    font-weight:bold;
+    color:#fff;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    transition:transform .08s, filter .15s;
+    min-height:96px;
+  }
+  .ansBtn .emo{font-size:38px;}
+  .ansBtn:active{transform:translateY(5px);}
+  #btnTrue{background:linear-gradient(180deg,#54d17f,var(--green));box-shadow:0 7px 0 var(--green-dark);}
+  #btnFalse{background:linear-gradient(180deg,#f27a63,var(--red));box-shadow:0 7px 0 var(--red-dark);}
+  #btnTrue:active{box-shadow:0 2px 0 var(--green-dark);}
+  #btnFalse:active{box-shadow:0 2px 0 var(--red-dark);}
+  .ansBtn:disabled{opacity:.45;cursor:default;}
+  .ansBtn.correctPulse{outline:5px solid #fff;animation:okpulse .5s;}
+  @keyframes okpulse{0%{transform:scale(1);}50%{transform:scale(1.08);}100%{transform:scale(1);}}
+
+  #nextBtn{
+    display:none;
+    margin:0 18px 20px;
+    background:var(--terracotta);
+    color:#fff;
+    border:none;
+    border-radius:20px;
+    padding:14px;
+    font-size:18px;
+    font-weight:bold;
+    box-shadow:0 5px 0 #b8461c;
+    cursor:pointer;
+  }
+  #nextBtn:active{transform:translateY(4px);box-shadow:0 1px 0 #b8461c;}
+
+  /* end screen */
+  #endScreen{
+    display:none;
+    flex:1;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:20px;
+    gap:10px;
+  }
+  #endScreen h2{color:var(--terracotta);font-size:26px;margin:0;}
+  #endScreen .stars{font-size:44px;letter-spacing:6px;}
+  #endScreen p{color:#6b5c46;font-size:16px;margin:0;}
+  #restartBtn{
+    margin-top:10px;
+    background:var(--gold);
+    border:none;
+    color:#5a3b00;
+    font-weight:bold;
+    font-size:18px;
+    padding:14px 30px;
+    border-radius:50px;
+    box-shadow:0 5px 0 #c98f00;
+    cursor:pointer;
+  }
+  #restartBtn:active{transform:translateY(4px);box-shadow:0 1px 0 #c98f00;}
+
+  .confetti{
+    position:absolute;
+    top:-10px;
+    font-size:22px;
+    pointer-events:none;
+    animation:fall linear forwards;
+    z-index:50;
+  }
+  @keyframes fall{
+    to{transform:translateY(520px) rotate(360deg);opacity:0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="cloud c1"></div>
+<div class="cloud c2"></div>
+
+<div id="app">
+  <div class="ornament-strip"></div>
+  <header>
+    <div id="scoreBar">⭐ <span id="scoreVal">0</span></div>
+    <h1>Шындық па, өтірік пе?</h1>
+    <div class="sub">Мақал ма, әлде өтірік пе — тыңда да тап!</div>
+  </header>
+
+  <div id="progressDots"></div>
+
+  <div id="stage">
+    <div class="speechBubble" id="bubble"><span class="lockedText">▶️ батырмасын бас та тыңда...</span></div>
+
+    <div id="charWrap">
+      <svg viewBox="0 0 220 230" id="charSvg">
+        <!-- shadow -->
+        <ellipse cx="110" cy="218" rx="55" ry="10" fill="rgba(0,0,0,.12)"/>
+
+        <!-- body / shapan -->
+        <path d="M60 230 Q60 150 110 150 Q160 150 160 230 Z" fill="#3f8f8a"/>
+        <path d="M60 230 Q60 150 110 150 L110 230 Z" fill="#347672"/>
+        <path d="M85 165 L95 230 M135 165 L125 230" stroke="#f4d58d" stroke-width="4" fill="none" opacity=".8"/>
+
+        <!-- ears -->
+        <path d="M62 78 Q40 40 70 48 Q78 62 78 88 Z" fill="#e8a26a"/>
+        <path d="M158 78 Q180 40 150 48 Q142 62 142 88 Z" fill="#e8a26a"/>
+        <path d="M65 74 Q52 50 68 56 Q73 65 73 82 Z" fill="#f6c99a"/>
+        <path d="M155 74 Q168 50 152 56 Q147 65 147 82 Z" fill="#f6c99a"/>
+
+        <!-- head -->
+        <circle cx="110" cy="108" r="58" fill="#f0b989"/>
+
+        <!-- tebetei hat -->
+        <path d="M50 92 Q50 30 110 26 Q170 30 170 92 Q140 68 110 68 Q80 68 50 92 Z" fill="#c0392b"/>
+        <path d="M46 92 Q110 118 174 92 L174 104 Q110 132 46 104 Z" fill="#f4e3c0"/>
+        <circle cx="110" cy="30" r="7" fill="#f4b41a"/>
+
+        <!-- eyebrows -->
+        <g id="brows">
+          <path id="browL" d="M80 92 Q92 85 104 90" stroke="#5a3620" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <path id="browR" d="M116 90 Q128 85 140 92" stroke="#5a3620" stroke-width="4" fill="none" stroke-linecap="round"/>
+        </g>
+
+        <!-- eyes -->
+        <g id="eyes">
+          <circle cx="90" cy="104" r="7" fill="#3a2517"/>
+          <circle cx="130" cy="104" r="7" fill="#3a2517"/>
+          <circle cx="92.5" cy="101.5" r="2" fill="#fff"/>
+          <circle cx="132.5" cy="101.5" r="2" fill="#fff"/>
+        </g>
+
+        <!-- cheeks -->
+        <circle cx="78" cy="122" r="8" fill="#e8836b" opacity=".55"/>
+        <circle cx="142" cy="122" r="8" fill="#e8836b" opacity=".55"/>
+
+        <!-- mustache -->
+        <path d="M92 130 Q80 136 70 132 Q84 142 96 133 Z" fill="#4a3324"/>
+        <path d="M128 130 Q140 136 150 132 Q136 142 124 133 Z" fill="#4a3324"/>
+
+        <!-- mouth (swapped via JS) -->
+        <path id="mouth" d="M96 138 Q110 146 124 138" stroke="#7a3b24" stroke-width="4" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <button id="playBtn"><span class="icon">▶️</span><span id="playLabel">Ойнату</span></button>
+    <div id="feedback"></div>
+  </div>
+
+  <div id="answers">
+    <button class="ansBtn" id="btnTrue" disabled>
+      <span class="emo">😊</span>
+      <span>ШЫНДЫҚ</span>
+    </button>
+    <button class="ansBtn" id="btnFalse" disabled>
+      <span class="emo">🤭</span>
+      <span>ӨТІРІК</span>
+    </button>
+  </div>
+
+  <button id="nextBtn">Келесі ➡️</button>
+
+  <div id="endScreen">
+    <h2>Ура! Ойын бітті! 🎉</h2>
+    <div class="stars" id="endStars">⭐⭐⭐</div>
+    <p id="endText">Сен 6-ның 5-ін дұрыс таптың!</p>
+    <button id="restartBtn">🔄 Қайта ойнау</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---------- Деректер: мақал (шын) және өтірік өлең (жалған) сөздер ----------
+  // audio өрісіне сәйкес mp3 файл атауларын өз дыбыстарыңызбен ауыстырыңыз
+  const ITEMS = [
+    { text: "Оқу – білім азығы, Білім – ырыс қазығы.", isTrue: true,  audio: "audio/audio1.mp3" },
+    { text: "Түйе ұшып аспанда, Жүзді балық орманда.", isTrue: false, audio: "audio/audio3.mp3" },
+    { text: "Отан – отбасынан басталады.", isTrue: true,  audio: "audio/audio2.mp3" },
+  ];
+
+  // ---------- Күй ----------
+  let order = [];
+  let idx = 0;
+  let score = 0;
+  let played = false;
+  let answered = false;
+
+  const bubble = document.getElementById('bubble');
+  const playBtn = document.getElementById('playBtn');
+  const playLabel = document.getElementById('playLabel');
+  const btnTrue = document.getElementById('btnTrue');
+  const btnFalse = document.getElementById('btnFalse');
+  const nextBtn = document.getElementById('nextBtn');
+  const feedback = document.getElementById('feedback');
+  const scoreVal = document.getElementById('scoreVal');
+  const progressDots = document.getElementById('progressDots');
+  const charWrap = document.getElementById('charWrap');
+  const mouth = document.getElementById('mouth');
+  const browL = document.getElementById('browL');
+  const browR = document.getElementById('browR');
+  const answersRow = document.getElementById('answers');
+  const stage = document.getElementById('stage');
+  const endScreen = document.getElementById('endScreen');
+  const endStars = document.getElementById('endStars');
+  const endText = document.getElementById('endText');
+  const restartBtn = document.getElementById('restartBtn');
+
+  let currentAudio = null;
+
+  // ---------- дыбыс эффектілері (Web Audio арқылы, файл қажет емес) ----------
+  let actx = null;
+  function beep(freqs, type, dur){
+    try{
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      let t = actx.currentTime;
+      freqs.forEach((f,i)=>{
+        const o = actx.createOscillator();
+        const g = actx.createGain();
+        o.type = type;
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + i*dur);
+        g.gain.exponentialRampToValueAtTime(0.18, t + i*dur + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + i*dur + dur);
+        o.connect(g).connect(actx.destination);
+        o.start(t + i*dur);
+        o.stop(t + i*dur + dur + 0.02);
+      });
+    }catch(e){}
+  }
+  function playCorrectSound(){ beep([523,659,784,1046], 'triangle', 0.14); }
+  function playWrongSound(){ beep([300,220], 'sawtooth', 0.2); }
+
+  // ---------- бет-әлпет күйлері ----------
+  function setFace(state){
+    if(state === 'happy'){
+      mouth.setAttribute('d','M92 136 Q110 156 128 136 Q110 148 92 136 Z');
+      mouth.setAttribute('fill','#7a3b24');
+      browL.setAttribute('d','M80 88 Q92 82 104 88');
+      browR.setAttribute('d','M116 88 Q128 82 140 88');
+    } else if(state === 'sad'){
+      mouth.setAttribute('d','M96 144 Q110 134 124 144');
+      mouth.setAttribute('fill','none');
+      browL.setAttribute('d','M80 90 Q92 96 104 92');
+      browR.setAttribute('d','M116 92 Q128 96 140 90');
+    } else {
+      mouth.setAttribute('d','M96 138 Q110 146 124 138');
+      mouth.setAttribute('fill','none');
+      browL.setAttribute('d','M80 92 Q92 85 104 90');
+      browR.setAttribute('d','M116 90 Q128 85 140 92');
+    }
+  }
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  function buildDots(){
+    progressDots.innerHTML = '';
+    order.forEach((_,i)=>{
+      const d = document.createElement('div');
+      d.className = 'dot';
+      d.id = 'dot'+i;
+      progressDots.appendChild(d);
+    });
+  }
+
+  function updateDots(){
+    order.forEach((_,i)=>{
+      const d = document.getElementById('dot'+i);
+      d.classList.remove('active','done','wrongDone');
+      if(i < idx){
+        // марк later after answering, handled separately
+      }
+      if(i === idx) d.classList.add('active');
+    });
+  }
+
+  function startGame(){
+    order = shuffle(ITEMS);
+    idx = 0; score = 0;
+    scoreVal.textContent = '0';
+    endScreen.style.display = 'none';
+    stage.style.display = 'flex';
+    answersRow.style.display = 'flex';
+    buildDots();
+    loadQuestion();
+  }
+
+  function loadQuestion(){
+    played = false;
+    answered = false;
+    feedback.textContent = '';
+    feedback.className = '';
+    bubble.innerHTML = '<span class="lockedText">▶️ батырмасын бас та тыңда...</span>';
+    bubble.classList.remove('hidden');
+    playLabel.textContent = 'Ойнату';
+    playBtn.classList.remove('playing');
+    btnTrue.disabled = true;
+    btnFalse.disabled = true;
+    btnTrue.classList.remove('correctPulse');
+    btnFalse.classList.remove('correctPulse');
+    nextBtn.style.display = 'none';
+    setFace('neutral');
+    updateDots();
+  }
+
+  function playCurrent(){
+    const item = order[idx];
+    bubble.innerHTML = item.text;
+    playLabel.textContent = 'Қайта тыңдау';
+    playBtn.classList.add('playing');
+
+    if(currentAudio){ currentAudio.pause(); }
+    currentAudio = new Audio(item.audio);
+    currentAudio.play().catch(()=>{ /* audio1.mp3 т.с.с. файл табылмаса — үнсіз жалғастырады */ });
+    currentAudio.onended = ()=>{ playBtn.classList.remove('playing'); };
+
+    if(!played){
+      played = true;
+      btnTrue.disabled = false;
+      btnFalse.disabled = false;
+    }
+  }
+
+  function spawnConfetti(){
+    const emojis = ['🎉','⭐','🎊','✨','🌟'];
+    for(let i=0;i<14;i++){
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+      el.style.left = (10 + Math.random()*80) + '%';
+      el.style.animationDuration = (0.9 + Math.random()*0.6) + 's';
+      document.getElementById('app').appendChild(el);
+      setTimeout(()=>el.remove(), 1600);
+    }
+  }
+
+  function answer(userSaysTrue){
+    if(answered || !played) return;
+    answered = true;
+    btnTrue.disabled = true;
+    btnFalse.disabled = true;
+
+    const item = order[idx];
+    const correct = (userSaysTrue === item.isTrue);
+    const dot = document.getElementById('dot'+idx);
+
+    if(correct){
+      score++;
+      scoreVal.textContent = score;
+      feedback.textContent = item.isTrue ? 'Дәл тұр! Бұл — шын мақал! 🎉' : 'Керемет! Бұл шынымен өтірік екен! 🎉';
+      feedback.className = 'good';
+      setFace('happy');
+      charWrap.classList.add('dance');
+      setTimeout(()=>charWrap.classList.remove('dance'), 1900);
+      playCorrectSound();
+      spawnConfetti();
+      (userSaysTrue ? btnTrue : btnFalse).classList.add('correctPulse');
+      dot.classList.add('done');
+    } else {
+      feedback.textContent = item.isTrue ? 'Ой-ой, бұл шын мақал еді! 😉' : 'Ой-ой, бұл өтірік еді! 😉';
+      feedback.className = 'bad';
+      setFace('sad');
+      charWrap.classList.add('shake');
+      setTimeout(()=>charWrap.classList.remove('shake'), 900);
+      playWrongSound();
+      dot.classList.add('wrongDone');
+    }
+
+    nextBtn.style.display = 'block';
+  }
+
+  function nextQuestion(){
+    idx++;
+    if(idx >= order.length){
+      showEnd();
+    } else {
+      loadQuestion();
+    }
+  }
+
+  function showEnd(){
+    stage.style.display = 'none';
+    answersRow.style.display = 'none';
+    nextBtn.style.display = 'none';
+    endScreen.style.display = 'flex';
+    const total = order.length;
+    const pct = score/total;
+    endStars.textContent = pct >= 0.8 ? '⭐⭐⭐' : pct >= 0.5 ? '⭐⭐' : '⭐';
+    endText.textContent = `Сен ${total}-дың ${score}-ін дұрыс таптың!`;
+    if(pct >= 0.8) spawnConfetti();
+  }
+
+  playBtn.addEventListener('click', playCurrent);
+  btnTrue.addEventListener('click', ()=>answer(true));
+  btnFalse.addEventListener('click', ()=>answer(false));
+  nextBtn.addEventListener('click', nextQuestion);
+  restartBtn.addEventListener('click', startGame);
+
+  startGame();
+})();
+</script>
+</body>
+</html>
